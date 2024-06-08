@@ -2,16 +2,16 @@
   <q-page class="row q-pt-xl">
     <div class="full-width q-px-xl">
       <div class="q-mb-xl">
-        <q-input v-model="tempData.name" label="姓名" />
-        <q-input v-model="tempData.age" label="年齡" />
-        <q-btn color="primary" class="q-mt-md">新增</q-btn>
+        <q-input v-model="user.name" label="姓名" />
+        <q-input v-model="user.age" label="年齡" />
+        <q-btn color="primary" class="q-mt-md" @click="handleAdd">新增</q-btn>
       </div>
 
       <q-table
         flat
         bordered
         ref="tableRef"
-        :rows="blockData"
+        :rows="users"
         :columns="(tableConfig as QTableProps['columns'])"
         row-key="id"
         hide-pagination
@@ -35,7 +35,7 @@
               :props="props"
               style="min-width: 120px"
             >
-              <div>{{ col.value }}</div>
+              <div :contenteditable="editable">{{ col.value }}</div>
             </q-td>
             <q-td class="text-right" auto-width v-if="tableButtons.length > 0">
               <q-btn
@@ -79,19 +79,31 @@
 
 <script setup lang="ts">
 import axios from 'axios';
-import { QTableProps } from 'quasar';
+import { QTableProps, useQuasar } from 'quasar';
 import { ref } from 'vue';
+const $q = useQuasar();
+const editable = ref(false);
 interface btnType {
   label: string;
   icon: string;
   status: string;
 }
-const blockData = ref([
-  {
-    name: 'test',
-    age: 25,
-  },
-]);
+const user = ref({
+  name: '',
+  age: '',
+});
+
+const users = ref([]);
+const addUser = () => {
+  users.value.push({ ...user.value, id: new Date().getTime().toString() });
+};
+const removeUser = (id) => {
+  users.value.splice(
+    users.value.findIndex((u) => u.id === id),
+    1
+  );
+};
+
 const tableConfig = ref([
   {
     label: '姓名',
@@ -106,6 +118,7 @@ const tableConfig = ref([
     align: 'left',
   },
 ]);
+
 const tableButtons = ref([
   {
     label: '編輯',
@@ -119,12 +132,37 @@ const tableButtons = ref([
   },
 ]);
 
-const tempData = ref({
-  name: '',
-  age: '',
-});
+const handleAdd = () => {
+  addUser();
+  // axios
+  axios
+    .post('', user.value)
+    .then(function (response) {
+      // id 應由 server side 產生
+      users.value.push(response.data);
+      user.value = { name: '', age: '' };
+      $q.notify('註冊成功');
+    })
+    .catch(function (error) {
+      $q.notify(error.message);
+    });
+};
+
 function handleClickOption(btn, data) {
   // ...
+
+  if (btn.status === 'delete') {
+    removeUser(data.id);
+
+    axios.delete('', {
+      params: {
+        id: data.id,
+      },
+    });
+  }
+  if (btn.status === 'edit') {
+    editable.value = !editable.value;
+  }
 }
 </script>
 
